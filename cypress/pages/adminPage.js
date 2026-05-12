@@ -173,6 +173,15 @@ class AdminPage {
     save() {
         this.saveButton.click()
     }
+
+    // Submete o formulário e aguarda a resposta da API antes de continuar.
+    // Foi usado desta forma pois em testes que verificam mensagem de sucesso garante que a asserção corre
+    // depois do servidor confirmar a gravação, evitando falhas por timing.
+    saveAndWait() {
+        cy.intercept('PUT', '**/api/v2/admin/users/**').as('saveUserRequest')
+        this.saveButton.click()
+        cy.wait('@saveUserRequest')
+    }
 }
 
 export default new AdminPage()

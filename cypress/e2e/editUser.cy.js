@@ -31,27 +31,34 @@ describe('Edit User', () => {
             .then(res => {
                 const empNumber = res.body.data[0].empNumber
 
-                // Passo 3: Verificar se o utilizador já existe para não duplicar
+                // Passo 3: Se o utilizador já existir (de uma execução anterior interrompida),
+                // apagá-lo para garantir estado limpo (ex: TC03 pode ter deixado o role em ESS)
                 cy.request({
                     method: 'GET',
                     url: '/web/index.php/api/v2/admin/users?username=testuser001',
                     failOnStatusCode: false
                 }).then(checkRes => {
-
-                    // Passo 4: Criar utilizador apenas se ainda não existir
-                    if (checkRes.body.data.length === 0) {
+                    if (checkRes.body.data.length > 0) {
+                        const userId = checkRes.body.data[0].id
                         cy.request({
-                            method: 'POST',
+                            method: 'DELETE',
                             url: '/web/index.php/api/v2/admin/users',
-                            body: {
-                                username:   'testuser001',
-                                password:   'testuser001!',
-                                status:     true,       // true = Enabled
-                                empNumber:  empNumber,
-                                userRoleId: 1           // 1 = Admin, 2 = ESS
-                            }
+                            body: { ids: [userId] }
                         })
                     }
+                }).then(() => {
+                    // Passo 4: Criar sempre o utilizador de raiz com role Admin garantido
+                    cy.request({
+                        method: 'POST',
+                        url: '/web/index.php/api/v2/admin/users',
+                        body: {
+                            username:   'testuser001',
+                            password:   'testuser001!',
+                            status:     true,       // true = Enabled
+                            empNumber:  empNumber,
+                            userRoleId: 1           // 1 = Admin, 2 = ESS
+                        }
+                    })
                 })
             })
     })
@@ -112,7 +119,7 @@ describe('Edit User', () => {
     // Restaura o role original no final para não afetar os testes seguintes.
     it("TC03 - Edit User's Role successfully", () => {
         adminPage.selectUserRole('ESS')
-        adminPage.save()
+        adminPage.saveAndWait()
         adminPage.successToast.should('be.visible')
 
         // Restaurar role original (Admin) para manter o estado do utilizador
@@ -124,7 +131,7 @@ describe('Edit User', () => {
     // Restaura o status original no final para não afetar os testes seguintes.
     it("TC04 - Edit User's Status successfully", () => {
         adminPage.selectStatus('Disabled')
-        adminPage.save()
+        adminPage.saveAndWait()
         adminPage.successToast.should('be.visible')
 
         // Restaurar status original (Enabled) para manter o estado do utilizador
@@ -136,7 +143,7 @@ describe('Edit User', () => {
     it("TC05 - Edit the User's Password successfully", () => {
         adminPage.enableChangePassword()
         adminPage.setPassword('testuser001!', 'testuser001!')
-        adminPage.save()
+        adminPage.saveAndWait()
         adminPage.successToast.should('be.visible')
     })
 
